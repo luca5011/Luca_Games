@@ -3,10 +3,10 @@ import { createClient } from 'https://esm.sh/@neondatabase/neon-js';
 // ↓↓↓ Neon 콘솔 > Auth 페이지 / Data API 페이지에서 실제 값으로 교체하세요 ↓↓↓
 export const neon = createClient({
   auth: {
-    url: 'https://ep-xxx.neon.tech/neondb/auth',
+    url: 'https://ep-twilight-smoke-a5h60kn2.neonauth.us-east-2.aws.neon.tech/neondb/auth',
   },
   dataApi: {
-    url: 'https://ep-xxx.neon.tech/neondb/rest/v1',
+    url: 'https://ep-twilight-smoke-a5h60kn2.apirest.us-east-2.aws.neon.tech/neondb/rest/v1',
   },
 });
 
