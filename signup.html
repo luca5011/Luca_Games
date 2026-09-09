@@ -2,84 +2,50 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <title>관리자 페이지</title>
+  <title>회원가입</title>
   <style>
-    body { font-family: sans-serif; max-width: 600px; margin: 40px auto; }
-    input { display: block; width: 100%; margin-bottom: 8px; padding: 8px; box-sizing: border-box; }
-    button { padding: 8px 16px; cursor: pointer; }
-    li { margin-bottom: 8px; }
+    body { font-family: sans-serif; max-width: 400px; margin: 80px auto; }
+    input { display: block; width: 100%; margin-bottom: 12px; padding: 8px; box-sizing: border-box; }
+    button { width: 100%; padding: 10px; cursor: pointer; }
+    #msg { margin-top: 12px; }
   </style>
 </head>
 <body>
 
-  <div style="display:flex; justify-content:space-between;">
-    <h2>관리자 페이지 (luca1234)</h2>
-    <button id="logout-btn">로그아웃</button>
-  </div>
-
-  <h3>게임 추가</h3>
-  <input id="title" placeholder="게임 제목">
-  <input id="loaderUrl" placeholder="loader.js URL">
-  <input id="dataUrl" placeholder="data URL">
-  <input id="frameworkUrl" placeholder="framework.js URL">
-  <input id="codeUrl" placeholder="wasm URL">
-  <button id="add-btn">추가</button>
-
-  <h3>게임 목록</h3>
-  <ul id="game-list"></ul>
+  <h2>회원가입</h2>
+  <input id="email" type="email" placeholder="이메일">
+  <input id="password" type="password" placeholder="비밀번호 (8자 이상)">
+  <button id="signup-btn">가입하기</button>
+  <p id="msg"></p>
+  <p><a href="login.html">로그인 페이지로</a></p>
 
   <script type="module">
     import { neon } from './neonClient.js';
 
-    const ADMIN_EMAIL = 'luca1234@admin.local';
+    const msg = document.getElementById('msg');
 
-    const { data } = await neon.auth.getSession();
-    if (!data?.session || data.session.user.email !== ADMIN_EMAIL) {
-      location.href = 'login.html';
-    }
+    document.getElementById('signup-btn').onclick = async () => {
+      const email = document.getElementById('email').value.trim();
+      const password = document.getElementById('password').value;
 
-    document.getElementById('logout-btn').onclick = async () => {
-      await neon.auth.signOut();
-      location.href = 'login.html';
-    };
-
-    document.getElementById('add-btn').onclick = async () => {
-      const payload = {
-        title: document.getElementById('title').value,
-        loader_url: document.getElementById('loaderUrl').value,
-        data_url: document.getElementById('dataUrl').value,
-        framework_url: document.getElementById('frameworkUrl').value,
-        code_url: document.getElementById('codeUrl').value,
-      };
-      if (!payload.title || !payload.loader_url) {
-        alert('제목과 loader URL은 필수입니다.');
+      if (!email || !password) {
+        msg.style.color = 'red';
+        msg.textContent = '이메일과 비밀번호를 입력하세요.';
         return;
       }
-      const { error } = await neon.from('games').insert(payload);
-      if (error) return alert(error.message);
-      ['title','loaderUrl','dataUrl','frameworkUrl','codeUrl'].forEach(id => document.getElementById(id).value = '');
-      loadGames();
+
+      const { error } = await neon.auth.signUp.email({ email, password });
+
+      if (error) {
+        msg.style.color = 'red';
+        msg.textContent = error.message;
+        return;
+      }
+
+      msg.style.color = 'green';
+      msg.textContent = '가입 완료! 로그인 페이지로 이동합니다...';
+      setTimeout(() => location.href = 'login.html', 1200);
     };
-
-    async function loadGames() {
-      const { data: games } = await neon.from('games').select();
-      const list = document.getElementById('game-list');
-      list.innerHTML = '';
-      games?.forEach(g => {
-        const li = document.createElement('li');
-        li.textContent = `${g.title} `;
-        const btn = document.createElement('button');
-        btn.textContent = '삭제';
-        btn.onclick = async () => {
-          await neon.from('games').delete().eq('id', g.id);
-          loadGames();
-        };
-        li.appendChild(btn);
-        list.appendChild(li);
-      });
-    }
-
-    loadGames();
   </script>
 
 </body>

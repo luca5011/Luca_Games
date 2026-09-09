@@ -2,103 +2,95 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <title>관리자</title>
+  <title>관리자 페이지</title>
+  <style>
+    body { font-family: sans-serif; max-width: 600px; margin: 40px auto; }
+    input { display: block; width: 100%; margin-bottom: 8px; padding: 8px; box-sizing: border-box; }
+    button { padding: 8px 16px; cursor: pointer; }
+    li { margin-bottom: 8px; }
+    .top { display: flex; justify-content: space-between; align-items: center; }
+  </style>
 </head>
 <body>
 
-  <div id="auth-forms">
-    <h3>회원가입</h3>
-    <input id="signup-email" placeholder="이메일">
-    <input id="signup-password" type="password" placeholder="비밀번호">
-    <button id="signup-btn">가입</button>
-
-    <h3>로그인</h3>
-    <input id="login-email" placeholder="이메일">
-    <input id="login-password" type="password" placeholder="비밀번호">
-    <button id="login-btn">로그인</button>
-  </div>
-
-  <div id="admin-panel" style="display:none;">
-    <p>로그인됨: <span id="user-email"></span></p>
+  <div class="top">
+    <h2>관리자 페이지 (luca1234)</h2>
     <button id="logout-btn">로그아웃</button>
-
-    <h3>게임 추가</h3>
-    <input id="title" placeholder="게임 제목">
-    <input id="loaderUrl" placeholder="loader.js URL">
-    <input id="dataUrl" placeholder="data URL">
-    <input id="frameworkUrl" placeholder="framework.js URL">
-    <input id="codeUrl" placeholder="wasm URL">
-    <button id="add-btn">추가</button>
-
-    <ul id="game-list"></ul>
   </div>
+
+  <h3>게임 추가</h3>
+  <input id="title" placeholder="게임 제목">
+  <input id="description" placeholder="설명 (선택)">
+  <input id="loaderUrl" placeholder="loader.js URL">
+  <input id="dataUrl" placeholder="data URL">
+  <input id="frameworkUrl" placeholder="framework.js URL">
+  <input id="codeUrl" placeholder="wasm(code) URL">
+  <button id="add-btn">추가</button>
+
+  <h3>게임 목록</h3>
+  <ul id="game-list"></ul>
 
   <script type="module">
-    import { neon } from './neonClient.js';
+    import { neon, ADMIN_EMAIL } from './neonClient.js';
 
-    async function checkSession() {
-      const { data } = await neon.auth.getSession();
-      if (data?.session) {
-        document.getElementById('auth-forms').style.display = 'none';
-        document.getElementById('admin-panel').style.display = 'block';
-        document.getElementById('user-email').textContent = data.session.user.email;
-        loadGames();
-      }
+    // 로그인 안 되어 있거나 관리자가 아니면 차단
+    const { data } = await neon.auth.getSession();
+    if (!data?.session || data.session.user.email !== ADMIN_EMAIL) {
+      location.href = 'login.html';
     }
-
-    document.getElementById('signup-btn').onclick = async () => {
-      const email = document.getElementById('signup-email').value;
-      const password = document.getElementById('signup-password').value;
-      const { error } = await neon.auth.signUp.email({ email, password });
-      if (error) return alert(error.message);
-      alert('가입 완료. 로그인 해주세요.');
-    };
-
-    document.getElementById('login-btn').onclick = async () => {
-      const email = document.getElementById('login-email').value;
-      const password = document.getElementById('login-password').value;
-      const { error } = await neon.auth.signIn.email({ email, password });
-      if (error) return alert(error.message);
-      checkSession();
-    };
 
     document.getElementById('logout-btn').onclick = async () => {
       await neon.auth.signOut();
-      location.reload();
+      location.href = 'login.html';
     };
 
     document.getElementById('add-btn').onclick = async () => {
       const payload = {
-        title: document.getElementById('title').value,
-        loader_url: document.getElementById('loaderUrl').value,
-        data_url: document.getElementById('dataUrl').value,
-        framework_url: document.getElementById('frameworkUrl').value,
-        code_url: document.getElementById('codeUrl').value,
+        title: document.getElementById('title').value.trim(),
+        description: document.getElementById('description').value.trim(),
+        loader_url: document.getElementById('loaderUrl').value.trim(),
+        data_url: document.getElementById('dataUrl').value.trim(),
+        framework_url: document.getElementById('frameworkUrl').value.trim(),
+        code_url: document.getElementById('codeUrl').value.trim(),
       };
+
+      if (!payload.title || !payload.loader_url || !payload.data_url || !payload.framework_url || !payload.code_url) {
+        alert('제목과 4개 URL은 모두 필수입니다.');
+        return;
+      }
+
       const { error } = await neon.from('games').insert(payload);
       if (error) return alert(error.message);
+
+      ['title','description','loaderUrl','dataUrl','frameworkUrl','codeUrl']
+        .forEach(id => document.getElementById(id).value = '');
       loadGames();
     };
 
     async function loadGames() {
-      const { data } = await neon.from('games').select();
+      const { data: games, error } = await neon.from('games').select();
+      if (error) { console.error(error); return; }
+
       const list = document.getElementById('game-list');
       list.innerHTML = '';
-      data?.forEach(g => {
+      games?.forEach(g => {
         const li = document.createElement('li');
         li.textContent = `${g.title} `;
-        const btn = document.createElement('button');
-        btn.textContent = '삭제';
-        btn.onclick = async () => {
+
+        const delBtn = document.createElement('button');
+        delBtn.textContent = '삭제';
+        delBtn.onclick = async () => {
+          if (!confirm(`"${g.title}" 삭제할까요?`)) return;
           await neon.from('games').delete().eq('id', g.id);
           loadGames();
         };
-        li.appendChild(btn);
+
+        li.appendChild(delBtn);
         list.appendChild(li);
       });
     }
 
-    checkSession();
+    loadGames();
   </script>
 
 </body>

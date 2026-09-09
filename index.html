@@ -4,11 +4,27 @@
   <meta charset="UTF-8">
   <title>게임 갤러리</title>
   <style>
-    #unity-container { width: 960px; height: 600px; }
+    body { font-family: sans-serif; max-width: 960px; margin: 20px auto; }
+    .top { display: flex; justify-content: space-between; align-items: center; }
+    #game-list { display: flex; flex-wrap: wrap; gap: 8px; padding: 0; list-style: none; }
+    #game-list li button { padding: 8px 14px; cursor: pointer; }
+    #unity-container { width: 960px; max-width: 100%; height: 600px; margin-top: 20px; }
     canvas { width: 100%; height: 100%; background: #231F20; }
+    #comments-section { margin-top: 16px; }
+    #comment-list { list-style: none; padding: 0; }
+    #comment-list li { border-bottom: 1px solid #ddd; padding: 6px 0; }
+    #comment-input { width: 80%; padding: 6px; }
   </style>
 </head>
 <body>
+
+  <div class="top">
+    <h2>게임 갤러리</h2>
+    <div>
+      <span id="user-email"></span>
+      <button id="logout-btn">로그아웃</button>
+    </div>
+  </div>
 
   <ul id="game-list"></ul>
 
@@ -16,13 +32,37 @@
     <canvas id="unity-canvas"></canvas>
   </div>
 
+  <div id="comments-section" style="display:none;">
+    <h3>댓글</h3>
+    <ul id="comment-list"></ul>
+    <input id="comment-input" placeholder="댓글을 입력하세요">
+    <button id="comment-submit">등록</button>
+  </div>
+
   <script type="module">
     import { neon } from './neonClient.js';
 
+    let currentGameId = null;
+
+    // 로그인 필수
+    const { data } = await neon.auth.getSession();
+    if (!data?.session) {
+      location.href = 'login.html';
+    }
+    document.getElementById('user-email').textContent = data.session.user.email;
+
+    document.getElementById('logout-btn').onclick = async () => {
+      await neon.auth.signOut();
+      location.href = 'login.html';
+    };
+
     async function loadGameList() {
-      const { data } = await neon.from('games').select();
+      const { data: games, error } = await neon.from('games').select();
+      if (error) { console.error(error); return; }
+
       const list = document.getElementById('game-list');
-      data?.forEach(g => {
+      list.innerHTML = '';
+      games?.forEach(g => {
         const li = document.createElement('li');
         const btn = document.createElement('button');
         btn.textContent = g.title;
@@ -33,7 +73,10 @@
     }
 
     function playGame(game) {
+      currentGameId = game.id;
       document.getElementById('unity-container').style.display = 'block';
+      document.getElementById('comments-section').style.display = 'block';
+
       const config = {
         dataUrl: game.data_url,
         frameworkUrl: game.framework_url,
@@ -43,13 +86,63 @@
         productName: game.title,
         productVersion: '1.0',
       };
+
+      const canvas = document.querySelector('#unity-canvas');
       const script = document.createElement('script');
       script.src = game.loader_url;
       script.onload = () => {
-        createUnityInstance(document.querySelector('#unity-canvas'), config)
+        createUnityInstance(canvas, config)
           .catch(err => alert(err));
       };
       document.body.appendChild(script);
+
+      loadComments();
+    }
+
+    // 유니티 쪽에서 SendMessage('WebGameBridge', 'RecordScore', '123') 형태로 호출하면
+    // 아래 함수가 실행되어 점수가 저장됩니다.
+    window.RecordScore = async (scoreValue) => {
+      if (!currentGameId) return;
+      const score = parseInt(scoreValue, 10);
+      if (Number.isNaN(score)) return;
+
+      const { error } = await neon.from('scores').insert({
+        game_id: currentGameId,
+        score,
+      });
+      if (error) console.error(error);
+    };
+
+    document.getElementById('comment-submit').onclick = async () => {
+      const input = document.getElementById('comment-input');
+      const content = input.value.trim();
+      if (!content || !currentGameId) return;
+
+      const { error } = await neon.from('comments').insert({
+        game_id: currentGameId,
+        content,
+      });
+      if (error) return alert(error.message);
+
+      input.value = '';
+      loadComments();
+    };
+
+    async function loadComments() {
+      if (!currentGameId) return;
+      const { data: comments, error } = await neon
+        .from('comments')
+        .select()
+        .eq('game_id', currentGameId);
+      if (error) { console.error(error); return; }
+
+      const list = document.getElementById('comment-list');
+      list.innerHTML = '';
+      comments?.forEach(c => {
+        const li = document.createElement('li');
+        li.textContent = c.content;
+        list.appendChild(li);
+      });
     }
 
     loadGameList();
