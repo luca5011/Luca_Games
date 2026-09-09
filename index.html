@@ -2,41 +2,37 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>게임 갤러리</title>
-  <style>
-    body { font-family: sans-serif; max-width: 960px; margin: 20px auto; }
-    .top { display: flex; justify-content: space-between; align-items: center; }
-    #game-list { display: flex; flex-wrap: wrap; gap: 8px; padding: 0; list-style: none; }
-    #game-list li button { padding: 8px 14px; cursor: pointer; }
-    #unity-container { width: 960px; max-width: 100%; height: 600px; margin-top: 20px; }
-    canvas { width: 100%; height: 100%; background: #231F20; }
-    #comments-section { margin-top: 16px; }
-    #comment-list { list-style: none; padding: 0; }
-    #comment-list li { border-bottom: 1px solid #ddd; padding: 6px 0; }
-    #comment-input { width: 80%; padding: 6px; }
-  </style>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Gugi&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-  <div class="top">
-    <h2>게임 갤러리</h2>
-    <div>
-      <span id="user-email"></span>
-      <button id="logout-btn">로그아웃</button>
+  <div class="page">
+    <div class="navbar">
+      <h2>게임 갤러리</h2>
+      <div class="navbar-right">
+        <span id="user-email"></span>
+        <button id="logout-btn" class="btn-ghost btn-small">로그아웃</button>
+      </div>
     </div>
-  </div>
 
-  <ul id="game-list"></ul>
+    <ul id="game-list" class="game-grid"></ul>
 
-  <div id="unity-container" style="display:none;">
-    <canvas id="unity-canvas"></canvas>
-  </div>
+    <div id="unity-container" style="display:none;">
+      <canvas id="unity-canvas"></canvas>
+    </div>
 
-  <div id="comments-section" style="display:none;">
-    <h3>댓글</h3>
-    <ul id="comment-list"></ul>
-    <input id="comment-input" placeholder="댓글을 입력하세요">
-    <button id="comment-submit">등록</button>
+    <div id="comments-section" style="display:none;">
+      <h3>댓글</h3>
+      <ul id="comment-list"></ul>
+      <div class="comment-form">
+        <input id="comment-input" type="text" placeholder="댓글을 남겨보세요">
+        <button id="comment-submit" class="btn-primary" style="width:auto;">등록</button>
+      </div>
+    </div>
   </div>
 
   <script type="module">
@@ -44,7 +40,6 @@
 
     let currentGameId = null;
 
-    // 로그인 필수
     const { data } = await neon.auth.getSession();
     if (!data?.session) {
       location.href = 'login.html';
@@ -62,12 +57,23 @@
 
       const list = document.getElementById('game-list');
       list.innerHTML = '';
-      games?.forEach(g => {
+
+      if (!games?.length) {
+        list.innerHTML = '<li class="empty-state" style="grid-column:1/-1;">아직 등록된 게임이 없어요. 관리자가 곧 추가할 예정이에요.</li>';
+        return;
+      }
+
+      games.forEach(g => {
         const li = document.createElement('li');
-        const btn = document.createElement('button');
-        btn.textContent = g.title;
-        btn.onclick = () => playGame(g);
-        li.appendChild(btn);
+        const card = document.createElement('button');
+        card.className = 'game-card';
+        card.innerHTML = `
+          <div class="marquee"></div>
+          <div class="title">${g.title}</div>
+          <div class="desc">${g.description || '플레이해보세요'}</div>
+        `;
+        card.onclick = () => playGame(g);
+        li.appendChild(card);
         list.appendChild(li);
       });
     }
@@ -91,25 +97,21 @@
       const script = document.createElement('script');
       script.src = game.loader_url;
       script.onload = () => {
-        createUnityInstance(canvas, config)
-          .catch(err => alert(err));
+        createUnityInstance(canvas, config).catch(err => alert(err));
       };
       document.body.appendChild(script);
 
+      document.getElementById('unity-container').scrollIntoView({ behavior: 'smooth' });
       loadComments();
     }
 
-    // 유니티 쪽에서 SendMessage('WebGameBridge', 'RecordScore', '123') 형태로 호출하면
-    // 아래 함수가 실행되어 점수가 저장됩니다.
+    // Unity 쪽에서 SendMessage('WebGameBridge', 'RecordScore', '123') 형태로 호출
     window.RecordScore = async (scoreValue) => {
       if (!currentGameId) return;
       const score = parseInt(scoreValue, 10);
       if (Number.isNaN(score)) return;
 
-      const { error } = await neon.from('scores').insert({
-        game_id: currentGameId,
-        score,
-      });
+      const { error } = await neon.from('scores').insert({ game_id: currentGameId, score });
       if (error) console.error(error);
     };
 
@@ -118,10 +120,7 @@
       const content = input.value.trim();
       if (!content || !currentGameId) return;
 
-      const { error } = await neon.from('comments').insert({
-        game_id: currentGameId,
-        content,
-      });
+      const { error } = await neon.from('comments').insert({ game_id: currentGameId, content });
       if (error) return alert(error.message);
 
       input.value = '';
@@ -138,7 +137,13 @@
 
       const list = document.getElementById('comment-list');
       list.innerHTML = '';
-      comments?.forEach(c => {
+
+      if (!comments?.length) {
+        list.innerHTML = '<li style="color:var(--text-muted); border-bottom:none;">아직 댓글이 없어요. 첫 댓글을 남겨보세요.</li>';
+        return;
+      }
+
+      comments.forEach(c => {
         const li = document.createElement('li');
         li.textContent = c.content;
         list.appendChild(li);

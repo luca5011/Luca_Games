@@ -2,22 +2,36 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <title>회원가입</title>
-  <style>
-    body { font-family: sans-serif; max-width: 400px; margin: 80px auto; }
-    input { display: block; width: 100%; margin-bottom: 12px; padding: 8px; box-sizing: border-box; }
-    button { width: 100%; padding: 10px; cursor: pointer; }
-    #msg { margin-top: 12px; }
-  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>회원가입 · 게임 갤러리</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Gugi&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-  <h2>회원가입</h2>
-  <input id="email" type="email" placeholder="이메일">
-  <input id="password" type="password" placeholder="비밀번호 (8자 이상)">
-  <button id="signup-btn">가입하기</button>
-  <p id="msg"></p>
-  <p><a href="login.html">로그인 페이지로</a></p>
+  <div class="page-narrow">
+    <div class="auth-card">
+      <h2>회원가입</h2>
+      <p class="subtitle">가입하면 게임을 플레이하고 댓글을 남길 수 있어요</p>
+
+      <div class="field">
+        <label for="email">이메일</label>
+        <input id="email" type="email" placeholder="you@example.com">
+      </div>
+      <div class="field">
+        <label for="password">비밀번호</label>
+        <input id="password" type="password" placeholder="8자 이상">
+      </div>
+
+      <button id="signup-btn" class="btn-primary">가입하기</button>
+      <p id="msg"></p>
+
+      <div class="auth-footer">
+        이미 계정이 있으신가요? <a href="login.html">로그인</a>
+      </div>
+    </div>
+  </div>
 
   <script type="module">
     import { neon } from './neonClient.js';
@@ -29,7 +43,7 @@
       const password = document.getElementById('password').value;
 
       if (!email || !password) {
-        msg.style.color = 'red';
+        msg.className = '';
         msg.textContent = '이메일과 비밀번호를 입력하세요.';
         return;
       }
@@ -37,12 +51,12 @@
       const { error } = await neon.auth.signUp.email({ email, password });
 
       if (error) {
-        msg.style.color = 'red';
+        msg.className = '';
         msg.textContent = error.message;
         return;
       }
 
-      msg.style.color = 'green';
+      msg.className = 'success';
       msg.textContent = '가입 완료! 로그인 페이지로 이동합니다...';
       setTimeout(() => location.href = 'login.html', 1200);
     };

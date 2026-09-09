@@ -2,22 +2,36 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <title>로그인</title>
-  <style>
-    body { font-family: sans-serif; max-width: 400px; margin: 80px auto; }
-    input { display: block; width: 100%; margin-bottom: 12px; padding: 8px; box-sizing: border-box; }
-    button { width: 100%; padding: 10px; cursor: pointer; }
-    #msg { margin-top: 12px; color: red; }
-  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>로그인 · 게임 갤러리</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Gugi&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-  <h2>로그인</h2>
-  <input id="email" type="email" placeholder="이메일 (관리자는 luca1234)">
-  <input id="password" type="password" placeholder="비밀번호">
-  <button id="login-btn">로그인</button>
-  <p id="msg"></p>
-  <p><a href="signup.html">회원가입 페이지로</a></p>
+  <div class="page-narrow">
+    <div class="auth-card">
+      <h2>로그인</h2>
+      <p class="subtitle">게임을 플레이하려면 로그인하세요</p>
+
+      <div class="field">
+        <label for="email">아이디 (관리자는 luca1234)</label>
+        <input id="email" type="text" placeholder="이메일 또는 luca1234">
+      </div>
+      <div class="field">
+        <label for="password">비밀번호</label>
+        <input id="password" type="password" placeholder="비밀번호">
+      </div>
+
+      <button id="login-btn" class="btn-primary">로그인</button>
+      <p id="msg"></p>
+
+      <div class="auth-footer">
+        계정이 없으신가요? <a href="signup.html">회원가입</a>
+      </div>
+    </div>
+  </div>
 
   <script type="module">
     import { neon, ADMIN_EMAIL } from './neonClient.js';
@@ -25,7 +39,6 @@
     const msg = document.getElementById('msg');
 
     function toRealEmail(input) {
-      // 관리자 고정 아이디(luca1234)는 내부 이메일로 변환, 그 외는 입력값 그대로 이메일로 사용
       return input === 'luca1234' ? ADMIN_EMAIL : input;
     }
 
@@ -33,7 +46,6 @@
       location.href = (email === ADMIN_EMAIL) ? 'admin.html' : 'index.html';
     }
 
-    // 이미 로그인되어 있으면 역할에 맞는 페이지로 자동 이동
     (async () => {
       const { data } = await neon.auth.getSession();
       if (data?.session) redirectByRole(data.session.user.email);
@@ -44,6 +56,7 @@
       const password = document.getElementById('password').value;
 
       if (!rawInput || !password) {
+        msg.className = '';
         msg.textContent = '아이디(이메일)와 비밀번호를 입력하세요.';
         return;
       }
@@ -52,6 +65,7 @@
       const { error } = await neon.auth.signIn.email({ email, password });
 
       if (error) {
+        msg.className = '';
         msg.textContent = '아이디 또는 비밀번호가 올바르지 않습니다.';
         return;
       }

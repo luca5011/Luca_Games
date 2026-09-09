@@ -2,38 +2,63 @@
 <html lang="ko">
 <head>
   <meta charset="UTF-8">
-  <title>관리자 페이지</title>
-  <style>
-    body { font-family: sans-serif; max-width: 600px; margin: 40px auto; }
-    input { display: block; width: 100%; margin-bottom: 8px; padding: 8px; box-sizing: border-box; }
-    button { padding: 8px 16px; cursor: pointer; }
-    li { margin-bottom: 8px; }
-    .top { display: flex; justify-content: space-between; align-items: center; }
-  </style>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>관리자 · 게임 갤러리</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Gugi&family=Noto+Sans+KR:wght@400;500;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="style.css">
 </head>
 <body>
 
-  <div class="top">
-    <h2>관리자 페이지 (luca1234)</h2>
-    <button id="logout-btn">로그아웃</button>
+  <div class="page">
+    <div class="navbar">
+      <h2>관리자 페이지</h2>
+      <div class="navbar-right">
+        <span>luca1234</span>
+        <button id="logout-btn" class="btn-ghost btn-small">로그아웃</button>
+      </div>
+    </div>
+
+    <div class="form-card">
+      <h3>게임 추가</h3>
+      <div class="form-grid">
+        <div class="field full">
+          <label for="title">게임 제목</label>
+          <input id="title" type="text" placeholder="예: 우주 탈출 대작전">
+        </div>
+        <div class="field full">
+          <label for="description">설명 (선택)</label>
+          <input id="description" type="text" placeholder="한 줄 소개">
+        </div>
+        <div class="field">
+          <label for="loaderUrl">loader.js URL</label>
+          <input id="loaderUrl" type="text" placeholder="https://.../game.loader.js">
+        </div>
+        <div class="field">
+          <label for="dataUrl">data URL</label>
+          <input id="dataUrl" type="text" placeholder="https://.../game.data">
+        </div>
+        <div class="field">
+          <label for="frameworkUrl">framework.js URL</label>
+          <input id="frameworkUrl" type="text" placeholder="https://.../game.framework.js">
+        </div>
+        <div class="field">
+          <label for="codeUrl">wasm URL</label>
+          <input id="codeUrl" type="text" placeholder="https://.../game.wasm">
+        </div>
+      </div>
+      <button id="add-btn" class="btn-primary" style="width:auto;">게임 추가</button>
+    </div>
+
+    <section>
+      <h3>등록된 게임</h3>
+      <ul id="game-list" class="manage-list"></ul>
+    </section>
   </div>
-
-  <h3>게임 추가</h3>
-  <input id="title" placeholder="게임 제목">
-  <input id="description" placeholder="설명 (선택)">
-  <input id="loaderUrl" placeholder="loader.js URL">
-  <input id="dataUrl" placeholder="data URL">
-  <input id="frameworkUrl" placeholder="framework.js URL">
-  <input id="codeUrl" placeholder="wasm(code) URL">
-  <button id="add-btn">추가</button>
-
-  <h3>게임 목록</h3>
-  <ul id="game-list"></ul>
 
   <script type="module">
     import { neon, ADMIN_EMAIL } from './neonClient.js';
 
-    // 로그인 안 되어 있거나 관리자가 아니면 차단
     const { data } = await neon.auth.getSession();
     if (!data?.session || data.session.user.email !== ADMIN_EMAIL) {
       location.href = 'login.html';
@@ -73,11 +98,21 @@
 
       const list = document.getElementById('game-list');
       list.innerHTML = '';
-      games?.forEach(g => {
+
+      if (!games?.length) {
+        list.innerHTML = '<li class="empty-state" style="width:100%;">아직 등록된 게임이 없어요.</li>';
+        return;
+      }
+
+      games.forEach(g => {
         const li = document.createElement('li');
-        li.textContent = `${g.title} `;
+
+        const span = document.createElement('span');
+        span.className = 'game-title';
+        span.textContent = g.title;
 
         const delBtn = document.createElement('button');
+        delBtn.className = 'btn-danger';
         delBtn.textContent = '삭제';
         delBtn.onclick = async () => {
           if (!confirm(`"${g.title}" 삭제할까요?`)) return;
@@ -85,6 +120,7 @@
           loadGames();
         };
 
+        li.appendChild(span);
         li.appendChild(delBtn);
         list.appendChild(li);
       });
