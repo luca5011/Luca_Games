@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <title>게임 갤러리</title>
+  <style>
+    #unity-container { width: 960px; height: 600px; }
+    canvas { width: 100%; height: 100%; background: #231F20; }
+  </style>
+</head>
+<body>
+
+  <ul id="game-list"></ul>
+
+  <div id="unity-container" style="display:none;">
+    <canvas id="unity-canvas"></canvas>
+  </div>
+
+  <script type="module">
+    import { neon } from './neonClient.js';
+
+    async function loadGameList() {
+      const { data } = await neon.from('games').select();
+      const list = document.getElementById('game-list');
+      data?.forEach(g => {
+        const li = document.createElement('li');
+        const btn = document.createElement('button');
+        btn.textContent = g.title;
+        btn.onclick = () => playGame(g);
+        li.appendChild(btn);
+        list.appendChild(li);
+      });
+    }
+
+    function playGame(game) {
+      document.getElementById('unity-container').style.display = 'block';
+      const config = {
+        dataUrl: game.data_url,
+        frameworkUrl: game.framework_url,
+        codeUrl: game.code_url,
+        streamingAssetsUrl: 'StreamingAssets',
+        companyName: 'MyCompany',
+        productName: game.title,
+        productVersion: '1.0',
+      };
+      const script = document.createElement('script');
+      script.src = game.loader_url;
+      script.onload = () => {
+        createUnityInstance(document.querySelector('#unity-canvas'), config)
+          .catch(err => alert(err));
+      };
+      document.body.appendChild(script);
+    }
+
+    loadGameList();
+  </script>
+
+</body>
+</html>
